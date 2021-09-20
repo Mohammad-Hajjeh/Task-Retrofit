@@ -60,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
     private ProgressDialog mProgressDialog;
     private File destinationFile;
     private APK apk;
+    private Retrofit retrofit;
 
 
     @Override
@@ -150,7 +151,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public <T> T createService(Class<T> serviceClass) {
-        Retrofit retrofit = new Retrofit.Builder()
+         retrofit = new Retrofit.Builder()
                 .baseUrl(APK_URL)
                 .client(new OkHttpClient.Builder().build())
                 .build();
@@ -161,11 +162,10 @@ public class MainActivity extends AppCompatActivity {
         HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
         interceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
         OkHttpClient client = new OkHttpClient.Builder().addInterceptor(interceptor).build();
-
         Gson gson = new GsonBuilder()
                 .setLenient()
                 .create();
-        Retrofit retrofit = new Retrofit.Builder()
+         retrofit = new Retrofit.Builder()
                 .baseUrl(API_URL)
                 .client(client)
                 .addConverterFactory(GsonConverterFactory.create(gson))
