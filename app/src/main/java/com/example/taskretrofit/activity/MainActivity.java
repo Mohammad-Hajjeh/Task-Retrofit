@@ -25,7 +25,9 @@ import com.example.taskretrofit.BuildConfig;
 import com.example.taskretrofit.R;
 import com.example.taskretrofit.service.RetrofitInterface;
 import com.example.taskretrofit.model.APK;
-import com.example.taskretrofit.model.ApiClient;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.jakewharton.retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -39,20 +41,24 @@ import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 import okhttp3.OkHttpClient;
 import okhttp3.ResponseBody;
+import okhttp3.logging.HttpLoggingInterceptor;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity {
 
     private DownloadApkFileTask downloadApkFileTask;
     private static final String TAG = "MainActivity";
+    private static final String VERSION_NAME = "1.1";
+    private static final String API_URL = "http://6fc8-185-114-120-43.ngrok.io/";
+    private static final String APK_URL = "http://download1518.mediafire.com/sl7fikmrd8ng/8323k64nyu9zq08/app-debug.apk/";
     private Context context;
     public static final int DIALOG_DOWNLOAD_PROGRESS = 0;
     private ProgressDialog mProgressDialog;
     private File destinationFile;
-    private Retrofit retrofit;
     private APK apk;
 
 
@@ -61,15 +67,13 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         context = this;
-        ApiClient apiClient = new ApiClient();
-        retrofit = apiClient.getRetrofit();
         loadJson();
 
 
     }
 
     void loadJson() {
-        RetrofitInterface retrofitInterface = retrofit.create(RetrofitInterface.class);
+        RetrofitInterface retrofitInterface = getRetrofit(RetrofitInterface.class);
         Observable<List<APK>> apkObservable = retrofitInterface.getApk();
         apkObservable.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(this::handleResults, this::handleError);
     }
@@ -79,19 +83,19 @@ public class MainActivity extends AppCompatActivity {
             apk = apkList.get(0);
             askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, 101);
 
-            if (apk.getVersion().equals("1.1"))
+            if (apk.getVersion().equals(VERSION_NAME))
                 downloadZipFile();
             else
-                Toast.makeText(this, "No Update", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.noUpdate, Toast.LENGTH_SHORT).show();
         } else {
-            Toast.makeText(this, "NO RESULTS FOUND",
+            Toast.makeText(this, R.string.resultNotFound,
                     Toast.LENGTH_LONG).show();
         }
     }
 
     private void handleError(Throwable t) {
 
-        Toast.makeText(this, "ERROR IN FETCHING API RESPONSE. Try again",
+        Toast.makeText(this, R.string.errorFitchApi,
                 Toast.LENGTH_LONG).show();
     }
 
@@ -99,35 +103,35 @@ public class MainActivity extends AppCompatActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
 
         builder.setCancelable(true);
-        builder.setTitle("Download new version");
-        builder.setMessage("There is a new version do you want to download it ?");
+        builder.setTitle(R.string.downloadTitle);
+        builder.setMessage(R.string.downloadMessage);
 
-        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+        builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
                 dialogInterface.cancel();
             }
         });
 
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+        builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
-                RetrofitInterface downloadService = createService(RetrofitInterface.class, "https://download1518.mediafire.com/");
-                Call<ResponseBody> call = downloadService.downloadFileByUrl("w6utfqqeqrrg/8323k64nyu9zq08/app-debug.apk");
+                RetrofitInterface downloadService = createService(RetrofitInterface.class);
+                Call<ResponseBody> call = downloadService.downloadFileByUrl();
 
                 call.enqueue(new Callback<ResponseBody>() {
                     @Override
                     public void onResponse(Call<ResponseBody> call, final Response<ResponseBody> response) {
                         if (response.isSuccessful()) {
-                            Log.d(TAG, "Got the body for the file");
+                            Log.d(TAG, getString(R.string.gotBody));
 
-                            Toast.makeText(getApplicationContext(), "Downloading...", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getApplicationContext(), R.string.downloading, Toast.LENGTH_SHORT).show();
 
                             downloadApkFileTask = new DownloadApkFileTask();
                             downloadApkFileTask.execute(response.body());
 
                         } else {
-                            Log.d(TAG, "Connection failed " + response.errorBody());
+                            Log.d(TAG, getString(R.string.connectionFailed) + response.errorBody());
                         }
                     }
 
@@ -145,10 +149,27 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public <T> T createService(Class<T> serviceClass, String baseUrl) {
+    public <T> T createService(Class<T> serviceClass) {
         Retrofit retrofit = new Retrofit.Builder()
-                .baseUrl(baseUrl)
+                .baseUrl(APK_URL)
                 .client(new OkHttpClient.Builder().build())
+                .build();
+        return retrofit.create(serviceClass);
+    }
+
+    public <T> T getRetrofit(Class<T> serviceClass) {
+        HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
+        interceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+        OkHttpClient client = new OkHttpClient.Builder().addInterceptor(interceptor).build();
+
+        Gson gson = new GsonBuilder()
+                .setLenient()
+                .create();
+        Retrofit retrofit = new Retrofit.Builder()
+                .baseUrl(API_URL)
+                .client(client)
+                .addConverterFactory(GsonConverterFactory.create(gson))
+                .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
                 .build();
         return retrofit.create(serviceClass);
     }
@@ -164,16 +185,16 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected String doInBackground(ResponseBody... urls) {
-            saveToDisk(urls[0], "Task1-project.apk");
+            saveToDisk(urls[0], getString(R.string.apkName));
             return null;
         }
 
         protected void onProgressUpdate(Pair<Integer, Long>... progress) {
 
-            Log.d("API123", progress[0].second + " ");
+            Log.d(getString(R.string.api123), progress[0].second + getString(R.string.space));
 
             if (progress[0].first == 100) {
-                Toast.makeText(getApplicationContext(), "File downloaded successfully", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), R.string.downloadSuccess, Toast.LENGTH_SHORT).show();
             }
 
 
@@ -183,7 +204,7 @@ public class MainActivity extends AppCompatActivity {
             }
 
             if (progress[0].first == -1) {
-                Toast.makeText(getApplicationContext(), "Download failed", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), R.string.downloadFailed, Toast.LENGTH_SHORT).show();
             }
 
         }
@@ -198,10 +219,10 @@ public class MainActivity extends AppCompatActivity {
             AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
 
             builder.setCancelable(true);
-            builder.setTitle("Install new version");
-            builder.setMessage("There is a new version do you want to install it ?");
+            builder.setTitle(R.string.installTitle);
+            builder.setMessage(R.string.installMessage);
 
-            builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialogInterface, int i) {
                     dialogInterface.cancel();
@@ -209,11 +230,11 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
-            builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
                 @Override
                 public void onClick(DialogInterface dialogInterface, int i) {
-                    Uri uri = FileProvider.getUriForFile(MainActivity.this, BuildConfig.APPLICATION_ID + ".provider", destinationFile);
-                    Intent promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, "application/vnd.android.package-archive");
+                    Uri uri = FileProvider.getUriForFile(MainActivity.this, BuildConfig.APPLICATION_ID + getString(R.string.provider), destinationFile);
+                    Intent promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, getString(R.string.installType));
                     promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                     promptInstall.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                     context.startActivity(promptInstall);
@@ -242,13 +263,13 @@ public class MainActivity extends AppCompatActivity {
                 int count;
                 int progress = 0;
                 long fileSize = body.contentLength();
-                Log.d(TAG, "File Size=" + fileSize);
+                Log.d(TAG, getString(R.string.fileSize) + fileSize);
                 while ((count = inputStream.read(data)) != -1) {
                     outputStream.write(data, 0, count);
                     progress += count;
                     Pair<Integer, Long> pairs = new Pair<>(progress, fileSize);
                     downloadApkFileTask.doProgress(pairs);
-                    Log.d(TAG, "Progress: " + progress + "/" + fileSize + " >>>> " + (float) progress / fileSize);
+                    Log.d(TAG, getString(R.string.progress) + progress + getString(R.string.slash) + fileSize + getString(R.string.print) + (float) progress / fileSize);
                 }
 
                 outputStream.flush();
@@ -261,7 +282,7 @@ public class MainActivity extends AppCompatActivity {
                 e.printStackTrace();
                 Pair<Integer, Long> pairs = new Pair<>(-1, Long.valueOf(-1));
                 downloadApkFileTask.doProgress(pairs);
-                Log.d(TAG, "Failed to save the file!");
+                Log.d(TAG, getString(R.string.saveFailed));
                 return null;
             } finally {
                 if (inputStream != null) inputStream.close();
@@ -272,7 +293,7 @@ public class MainActivity extends AppCompatActivity {
 
         } catch (IOException e) {
             e.printStackTrace();
-            Log.d(TAG, "Failed to save the file!");
+            Log.d(TAG, getString(R.string.saveFailed));
             return null;
         }
     }
@@ -288,7 +309,7 @@ public class MainActivity extends AppCompatActivity {
                 ActivityCompat.requestPermissions(MainActivity.this, new String[]{permission}, requestCode);
             }
         } else if (ContextCompat.checkSelfPermission(MainActivity.this, permission) == PackageManager.PERMISSION_DENIED) {
-            Toast.makeText(getApplicationContext(), "Permission was denied", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), R.string.permissionDenied, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -298,9 +319,9 @@ public class MainActivity extends AppCompatActivity {
         if (ActivityCompat.checkSelfPermission(this, permissions[0]) == PackageManager.PERMISSION_GRANTED) {
 
             if (requestCode == 101)
-                Toast.makeText(this, "Permission granted", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.permissionGranted, Toast.LENGTH_SHORT).show();
         } else {
-            Toast.makeText(this, "Permission denied", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.permissionDeniedMessage, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -309,7 +330,7 @@ public class MainActivity extends AppCompatActivity {
         switch (id) {
             case DIALOG_DOWNLOAD_PROGRESS:
                 mProgressDialog = new ProgressDialog(this);
-                mProgressDialog.setMessage("Downloading file..");
+                mProgressDialog.setMessage(getString(R.string.downloadFile));
                 mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
                 mProgressDialog.setCancelable(false);
                 mProgressDialog.show();

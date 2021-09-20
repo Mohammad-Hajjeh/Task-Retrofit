@@ -1,3 +1,31 @@
 <resources>
     <string name="app_name">Task Retrofit</string>
+    <string name="noUpdate">No Update</string>
+    <string name="resultNotFound">NO RESULTS FOUND</string>
+    <string name="errorFitchApi">ERROR IN FETCHING API RESPONSE. Try again</string>
+    <string name="downloadTitle">Download new version</string>
+    <string name="downloadMessage">There is a new version do you want to download it ?</string>
+    <string name="cancel">Cancel</string>
+    <string name="ok">OK</string>
+    <string name="gotBody">Got the body for the file</string>
+    <string name="downloading">Downloading...</string>
+    <string name="connectionFailed">\"Connection failed \"</string>
+    <string name="apkName">Task1-project.apk</string>
+    <string name="downloadSuccess">File downloaded successfully</string>
+    <string name="downloadFailed">Download failed</string>
+    <string name="installTitle">Install new version</string>
+    <string name="installMessage">There is a new version do you want to install it ?</string>
+    <string name="installType">application/vnd.android.package-archive</string>
+    <string name="provider">.provider</string>
+    <string name="fileSize">File Size=</string>
+    <string name="progress">\"Progress: \"</string>
+    <string name="slash">/</string>
+    <string name="print"><![CDATA[\" >>>> \"]]></string>
+    <string name="saveFailed">Failed to save the file!</string>
+    <string name="permissionDenied">Permission was denied</string>
+    <string name="permissionGranted">Permission granted</string>
+    <string name="permissionDeniedMessage">Permission denied</string>
+    <string name="downloadFile">Downloading file..</string>
+    <string name="api123">API123</string>
+    <string name="space">\" \"</string>
 </resources>
