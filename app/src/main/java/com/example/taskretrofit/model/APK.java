@@ -1,4 +1,4 @@
-package com.example.taskretrofit;
+package com.example.taskretrofit.model;
 
 import com.google.gson.annotations.SerializedName;
 

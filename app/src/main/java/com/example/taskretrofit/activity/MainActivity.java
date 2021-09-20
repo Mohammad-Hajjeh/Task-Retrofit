@@ -1,4 +1,4 @@
-package com.example.taskretrofit;
+package com.example.taskretrofit.activity;
 
 import android.Manifest;
 import android.app.Dialog;
@@ -13,7 +13,6 @@ import android.os.Environment;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Pair;
-import android.widget.ListView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
@@ -21,6 +20,12 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+
+import com.example.taskretrofit.BuildConfig;
+import com.example.taskretrofit.R;
+import com.example.taskretrofit.service.RetrofitInterface;
+import com.example.taskretrofit.model.APK;
+import com.example.taskretrofit.model.ApiClient;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -41,7 +46,7 @@ import retrofit2.Retrofit;
 
 public class MainActivity extends AppCompatActivity {
 
-    private DownloadZipFileTask downloadZipFileTask;
+    private DownloadApkFileTask downloadApkFileTask;
     private static final String TAG = "MainActivity";
     private Context context;
     public static final int DIALOG_DOWNLOAD_PROGRESS = 0;
@@ -107,8 +112,8 @@ public class MainActivity extends AppCompatActivity {
         builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
-                RetrofitInterface downloadService = createService(RetrofitInterface.class, "https://download1510.mediafire.com/");
-                Call<ResponseBody> call = downloadService.downloadFileByUrl("tipbz2lategg/39y2jazon1uq2bo/app-debug.apk");
+                RetrofitInterface downloadService = createService(RetrofitInterface.class, "https://download1518.mediafire.com/");
+                Call<ResponseBody> call = downloadService.downloadFileByUrl("w6utfqqeqrrg/8323k64nyu9zq08/app-debug.apk");
 
                 call.enqueue(new Callback<ResponseBody>() {
                     @Override
@@ -118,8 +123,8 @@ public class MainActivity extends AppCompatActivity {
 
                             Toast.makeText(getApplicationContext(), "Downloading...", Toast.LENGTH_SHORT).show();
 
-                            downloadZipFileTask = new DownloadZipFileTask();
-                            downloadZipFileTask.execute(response.body());
+                            downloadApkFileTask = new DownloadApkFileTask();
+                            downloadApkFileTask.execute(response.body());
 
                         } else {
                             Log.d(TAG, "Connection failed " + response.errorBody());
@@ -148,7 +153,7 @@ public class MainActivity extends AppCompatActivity {
         return retrofit.create(serviceClass);
     }
 
-    private class DownloadZipFileTask extends AsyncTask<ResponseBody, Pair<Integer, Long>, String> {
+    private class DownloadApkFileTask extends AsyncTask<ResponseBody, Pair<Integer, Long>, String> {
 
         @Override
         protected void onPreExecute() {
@@ -159,7 +164,6 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected String doInBackground(ResponseBody... urls) {
-            //Copy you logic to calculate progress and call
             saveToDisk(urls[0], "Task1-project.apk");
             return null;
         }
@@ -243,7 +247,7 @@ public class MainActivity extends AppCompatActivity {
                     outputStream.write(data, 0, count);
                     progress += count;
                     Pair<Integer, Long> pairs = new Pair<>(progress, fileSize);
-                    downloadZipFileTask.doProgress(pairs);
+                    downloadApkFileTask.doProgress(pairs);
                     Log.d(TAG, "Progress: " + progress + "/" + fileSize + " >>>> " + (float) progress / fileSize);
                 }
 
@@ -251,12 +255,12 @@ public class MainActivity extends AppCompatActivity {
 
                 Log.d(TAG, destinationFile.getParent());
                 Pair<Integer, Long> pairs = new Pair<>(100, 100L);
-                downloadZipFileTask.doProgress(pairs);
+                downloadApkFileTask.doProgress(pairs);
                 return destinationFile;
             } catch (IOException e) {
                 e.printStackTrace();
                 Pair<Integer, Long> pairs = new Pair<>(-1, Long.valueOf(-1));
-                downloadZipFileTask.doProgress(pairs);
+                downloadApkFileTask.doProgress(pairs);
                 Log.d(TAG, "Failed to save the file!");
                 return null;
             } finally {

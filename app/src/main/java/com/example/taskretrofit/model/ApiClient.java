@@ -1,4 +1,4 @@
-package com.example.taskretrofit;
+package com.example.taskretrofit.model;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -11,6 +11,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiClient {
     Retrofit retrofit;
+
     public Retrofit getRetrofit() {
         HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
         interceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
@@ -21,7 +22,7 @@ public class ApiClient {
                 .create();
 
         retrofit = new Retrofit.Builder()
-                .baseUrl("http://2c1b-185-114-120-43.ngrok.io/")
+                .baseUrl("http://3345-185-114-120-43.ngrok.io/")
                 .client(client)
                 .addConverterFactory(GsonConverterFactory.create(gson))
                 .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
