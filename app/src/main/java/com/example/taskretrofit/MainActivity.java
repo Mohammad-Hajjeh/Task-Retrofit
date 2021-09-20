@@ -2,7 +2,6 @@ package com.example.taskretrofit;
 
 import android.Manifest;
 import android.app.Dialog;
-import android.app.DownloadManager;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -14,10 +13,7 @@ import android.os.Environment;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.Pair;
-import android.view.View;
-import android.widget.Button;
-import android.widget.ProgressBar;
-import android.widget.TextView;
+import android.widget.ListView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
@@ -31,7 +27,11 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.List;
 
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.schedulers.Schedulers;
 import okhttp3.OkHttpClient;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
@@ -41,16 +41,14 @@ import retrofit2.Retrofit;
 
 public class MainActivity extends AppCompatActivity {
 
-//    TextView txtProgressPercent;
-//    ProgressBar progressBar;
-//    Button btnDownloadFile;
-
     private DownloadZipFileTask downloadZipFileTask;
     private static final String TAG = "MainActivity";
     private Context context;
     public static final int DIALOG_DOWNLOAD_PROGRESS = 0;
     private ProgressDialog mProgressDialog;
     private File destinationFile;
+    private Retrofit retrofit;
+    private APK apk;
 
 
     @Override
@@ -58,10 +56,38 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         context = this;
-        askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, 101);
-        downloadZipFile();
+        ApiClient apiClient = new ApiClient();
+        retrofit = apiClient.getRetrofit();
+        loadJson();
 
 
+    }
+
+    void loadJson() {
+        RetrofitInterface retrofitInterface = retrofit.create(RetrofitInterface.class);
+        Observable<List<APK>> apkObservable = retrofitInterface.getApk();
+        apkObservable.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(this::handleResults, this::handleError);
+    }
+
+    private void handleResults(List<APK> apkList) {
+        if (apkList != null && apkList.size() != 0) {
+            apk = apkList.get(0);
+            askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, 101);
+
+            if (apk.getVersion().equals("1.1"))
+                downloadZipFile();
+            else
+                Toast.makeText(this, "No Update", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "NO RESULTS FOUND",
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void handleError(Throwable t) {
+
+        Toast.makeText(this, "ERROR IN FETCHING API RESPONSE. Try again",
+                Toast.LENGTH_LONG).show();
     }
 
     private void downloadZipFile() {
@@ -81,8 +107,8 @@ public class MainActivity extends AppCompatActivity {
         builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
-                RetrofitInterface downloadService = createService(RetrofitInterface.class, "https://download1593.mediafire.com/");
-                Call<ResponseBody> call = downloadService.downloadFileByUrl("0xtk29axi8lg/tfd99wslz9h2vhg/app-debug.apk");
+                RetrofitInterface downloadService = createService(RetrofitInterface.class, "https://download1510.mediafire.com/");
+                Call<ResponseBody> call = downloadService.downloadFileByUrl("tipbz2lategg/39y2jazon1uq2bo/app-debug.apk");
 
                 call.enqueue(new Callback<ResponseBody>() {
                     @Override
