@@ -3,9 +3,11 @@ package com.example.taskretrofit.activity;
 import android.Manifest;
 import android.app.Dialog;
 import android.app.ProgressDialog;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -20,9 +22,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.example.taskretrofit.BuildConfig;
 import com.example.taskretrofit.R;
+import com.example.taskretrofit.service.MyService;
 import com.example.taskretrofit.service.RetrofitInterface;
 import com.example.taskretrofit.model.APK;
 import com.google.gson.Gson;
@@ -35,6 +39,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -50,15 +55,12 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class MainActivity extends AppCompatActivity {
 
-    private DownloadApkFileTask downloadApkFileTask;
-    private static final String TAG = "MainActivity";
+
     private static final String VERSION_NAME = "1.1";
-    private static final String API_URL = "http://6fc8-185-114-120-43.ngrok.io/";
-    private static final String APK_URL = "http://download1518.mediafire.com/sl7fikmrd8ng/8323k64nyu9zq08/app-debug.apk/";
+    private static final String API_URL = "http://d4ed-185-114-120-45.ngrok.io/";
     private Context context;
     public static final int DIALOG_DOWNLOAD_PROGRESS = 0;
     private ProgressDialog mProgressDialog;
-    private File destinationFile;
     private APK apk;
     private Retrofit retrofit;
 
@@ -117,45 +119,17 @@ public class MainActivity extends AppCompatActivity {
         builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
-                RetrofitInterface downloadService = createService(RetrofitInterface.class);
-                Call<ResponseBody> call = downloadService.downloadFileByUrl();
-
-                call.enqueue(new Callback<ResponseBody>() {
-                    @Override
-                    public void onResponse(Call<ResponseBody> call, final Response<ResponseBody> response) {
-                        if (response.isSuccessful()) {
-                            Log.d(TAG, getString(R.string.gotBody));
-
-                            Toast.makeText(getApplicationContext(), R.string.downloading, Toast.LENGTH_SHORT).show();
-
-                            downloadApkFileTask = new DownloadApkFileTask();
-                            downloadApkFileTask.execute(response.body());
-
-                        } else {
-                            Log.d(TAG, getString(R.string.connectionFailed) + response.errorBody());
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Call<ResponseBody> call, Throwable t) {
-                        t.printStackTrace();
-                        Log.e(TAG, t.getMessage());
-                    }
-                });
-
+                startService(new Intent(getApplicationContext(), MyService.class));
+                //Toast.makeText(MainActivity.this, "backToActivity", Toast.LENGTH_SHORT).show();
             }
 
         });
         builder.show();
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+                mMessageReceiver, new IntentFilter("ServiceNotify"));
 
-    }
 
-    public <T> T createService(Class<T> serviceClass) {
-         retrofit = new Retrofit.Builder()
-                .baseUrl(APK_URL)
-                .client(new OkHttpClient.Builder().build())
-                .build();
-        return retrofit.create(serviceClass);
+
     }
 
     public <T> T getRetrofit(Class<T> serviceClass) {
@@ -165,137 +139,13 @@ public class MainActivity extends AppCompatActivity {
         Gson gson = new GsonBuilder()
                 .setLenient()
                 .create();
-         retrofit = new Retrofit.Builder()
+        retrofit = new Retrofit.Builder()
                 .baseUrl(API_URL)
                 .client(client)
                 .addConverterFactory(GsonConverterFactory.create(gson))
                 .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
                 .build();
         return retrofit.create(serviceClass);
-    }
-
-    private class DownloadApkFileTask extends AsyncTask<ResponseBody, Pair<Integer, Long>, String> {
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            showDialog(DIALOG_DOWNLOAD_PROGRESS);
-
-        }
-
-        @Override
-        protected String doInBackground(ResponseBody... urls) {
-            saveToDisk(urls[0], getString(R.string.apkName));
-            return null;
-        }
-
-        protected void onProgressUpdate(Pair<Integer, Long>... progress) {
-
-            Log.d(getString(R.string.api123), progress[0].second + getString(R.string.space));
-
-            if (progress[0].first == 100) {
-                Toast.makeText(getApplicationContext(), R.string.downloadSuccess, Toast.LENGTH_SHORT).show();
-            }
-
-
-            if (progress[0].second > 0) {
-                int currentProgress = (int) ((double) progress[0].first / (double) progress[0].second * 100);
-                mProgressDialog.setProgress(currentProgress);
-            }
-
-            if (progress[0].first == -1) {
-                Toast.makeText(getApplicationContext(), R.string.downloadFailed, Toast.LENGTH_SHORT).show();
-            }
-
-        }
-
-        public void doProgress(Pair<Integer, Long> progressDetails) {
-            publishProgress(progressDetails);
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            super.onPostExecute(result);
-            AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-
-            builder.setCancelable(true);
-            builder.setTitle(R.string.installTitle);
-            builder.setMessage(R.string.installMessage);
-
-            builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialogInterface, int i) {
-                    dialogInterface.cancel();
-
-                }
-            });
-
-            builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialogInterface, int i) {
-                    Uri uri = FileProvider.getUriForFile(MainActivity.this, BuildConfig.APPLICATION_ID + getString(R.string.provider), destinationFile);
-                    Intent promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, getString(R.string.installType));
-                    promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    promptInstall.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                    context.startActivity(promptInstall);
-                }
-            });
-            builder.show();
-
-        }
-    }
-
-    private File saveToDisk(ResponseBody body, String filename) {
-        try {
-
-
-            destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), filename);
-
-            InputStream inputStream = null;
-            OutputStream outputStream = null;
-
-            try {
-
-
-                inputStream = body.byteStream();
-                outputStream = new FileOutputStream(destinationFile);
-                byte data[] = new byte[4096];
-                int count;
-                int progress = 0;
-                long fileSize = body.contentLength();
-                Log.d(TAG, getString(R.string.fileSize) + fileSize);
-                while ((count = inputStream.read(data)) != -1) {
-                    outputStream.write(data, 0, count);
-                    progress += count;
-                    Pair<Integer, Long> pairs = new Pair<>(progress, fileSize);
-                    downloadApkFileTask.doProgress(pairs);
-                    Log.d(TAG, getString(R.string.progress) + progress + getString(R.string.slash) + fileSize + getString(R.string.print) + (float) progress / fileSize);
-                }
-
-                outputStream.flush();
-
-                Log.d(TAG, destinationFile.getParent());
-                Pair<Integer, Long> pairs = new Pair<>(100, 100L);
-                downloadApkFileTask.doProgress(pairs);
-                return destinationFile;
-            } catch (IOException e) {
-                e.printStackTrace();
-                Pair<Integer, Long> pairs = new Pair<>(-1, Long.valueOf(-1));
-                downloadApkFileTask.doProgress(pairs);
-                Log.d(TAG, getString(R.string.saveFailed));
-                return null;
-            } finally {
-                if (inputStream != null) inputStream.close();
-                if (outputStream != null) outputStream.close();
-
-
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-            Log.d(TAG, getString(R.string.saveFailed));
-            return null;
-        }
     }
 
     private void askForPermission(String permission, Integer requestCode) {
@@ -339,4 +189,40 @@ public class MainActivity extends AppCompatActivity {
                 return null;
         }
     }
+    private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            // Get extra data included in the Intent
+            Integer status = intent.getIntExtra("Status",0);
+
+            File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.apkName));
+
+            if(status==1){
+                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                builder.setCancelable(true);
+                builder.setTitle(R.string.installTitle);
+                builder.setMessage(R.string.installMessage);
+
+                builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dialogInterface.cancel();
+
+                    }
+                });
+
+                builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        Uri uri = FileProvider.getUriForFile(getApplicationContext(), BuildConfig.APPLICATION_ID + getString(R.string.provider), destinationFile);
+                        Intent promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, getString(R.string.installType));
+                        promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        promptInstall.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        getApplicationContext().startActivity(promptInstall);
+                    }
+                });
+                builder.show();
+            }
+        }
+    };
 }
