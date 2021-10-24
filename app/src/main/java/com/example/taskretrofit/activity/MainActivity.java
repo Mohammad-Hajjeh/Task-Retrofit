@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     private static final String VERSION_NAME = "1.1";
-    private static final String API_URL = "http://d4ed-185-114-120-45.ngrok.io/";
+    private static final String API_URL = "http://520d-185-114-120-44.ngrok.io/";
     public static final int DIALOG_DOWNLOAD_PROGRESS = 0;
     private ProgressDialog mProgressDialog;
     private APK apk;
@@ -72,14 +72,21 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void handleResults(List<APK> apkList) {
+        File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.apkName));
         if (apkList != null && apkList.size() != 0) {
             apk = apkList.get(0);
             askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, 101);
 
             if (apk.getVersion().equals(VERSION_NAME))
-                downloadZipFile();
-            else
-                Toast.makeText(this, R.string.noUpdate, Toast.LENGTH_SHORT).show();
+                if (!destinationFile.exists())
+                    downloadZipFile();
+                else
+                {
+                    installFile();
+                }
+
+                else
+                    Toast.makeText(this, R.string.noUpdate, Toast.LENGTH_SHORT).show();
         } else {
             Toast.makeText(this, R.string.resultNotFound,
                     Toast.LENGTH_LONG).show();
@@ -110,6 +117,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
                 startService(new Intent(getApplicationContext(), MyService.class));
+
             }
 
         });
@@ -177,39 +185,45 @@ public class MainActivity extends AppCompatActivity {
                 return null;
         }
     }
+void installFile(){
+    File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.apkName));
+//    if(!destinationFile.exists())
+//        downloadZipFile();
+    AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+    builder.setCancelable(true);
+    builder.setTitle(R.string.installTitle);
+    builder.setMessage(R.string.installMessage);
 
+    builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+        @Override
+        public void onClick(DialogInterface dialogInterface, int i) {
+            dialogInterface.cancel();
+
+        }
+    });
+
+    builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+        @Override
+        public void onClick(DialogInterface dialogInterface, int i) {
+            Uri uri = FileProvider.getUriForFile(getApplicationContext(), BuildConfig.APPLICATION_ID + getString(R.string.provider), destinationFile);
+            Intent promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, getString(R.string.installType));
+            promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            promptInstall.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            getApplicationContext().startActivity(promptInstall);
+        }
+    });
+    builder.show();
+}
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             Integer status = intent.getIntExtra(getString(R.string.status), 0);
 
-            File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.apkName));
 
             if (status == 1) {
-                AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-                builder.setCancelable(true);
-                builder.setTitle(R.string.installTitle);
-                builder.setMessage(R.string.installMessage);
+                installFile();
+//                stopService(new Intent(MainActivity.this, MyService.class));
 
-                builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        dialogInterface.cancel();
-
-                    }
-                });
-
-                builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        Uri uri = FileProvider.getUriForFile(getApplicationContext(), BuildConfig.APPLICATION_ID + getString(R.string.provider), destinationFile);
-                        Intent promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, getString(R.string.installType));
-                        promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        promptInstall.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                        getApplicationContext().startActivity(promptInstall);
-                    }
-                });
-                builder.show();
             }
         }
     };

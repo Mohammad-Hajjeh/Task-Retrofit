@@ -1,6 +1,8 @@
 package com.example.taskretrofit.service;
 
+import android.app.AlarmManager;
 import android.app.Dialog;
+import android.app.PendingIntent;
 import android.app.ProgressDialog;
 import android.app.Service;
 import android.content.Context;
@@ -31,6 +33,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.OkHttpClient;
@@ -43,7 +46,7 @@ import retrofit2.Retrofit;
 public class MyService extends Service {
     private DownloadApkFileTask downloadApkFileTask;
     private static final String TAG = "MainActivity";
-    private static final String APK_URL = "http://download1585.mediafire.com/2r6v5l0hvvag/jpjaomhcj7ewaf1/app-debug.apk/";
+    private static final String APK_URL = "http://download1585.mediafire.com/p2hhs99m1q7g/jpjaomhcj7ewaf1/app-debug.apk/";
     private Retrofit retrofit;
     private File destinationFile;
 
@@ -53,7 +56,25 @@ public class MyService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        Toast.makeText(this, R.string.serviceDestroyed, Toast.LENGTH_SHORT).show();
+        Toast.makeText(getApplicationContext(),  R.string.serviceDestroyed, Toast.LENGTH_LONG).show();
+
+
+        Intent myIntent = new Intent(getApplicationContext(), MyService.class);
+
+        PendingIntent pendingIntent = PendingIntent.getService(getApplicationContext(), 0, myIntent, 0);
+
+        AlarmManager alarmManager1 = (AlarmManager) getSystemService(ALARM_SERVICE);
+
+        Calendar calendar = Calendar.getInstance();
+
+        calendar.setTimeInMillis(System.currentTimeMillis());
+
+        calendar.add(Calendar.SECOND, 10);
+
+        alarmManager1.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+
+//        Toast.makeText(getApplicationContext(), R.string.downloading, Toast.LENGTH_SHORT).show();
+
     }
 
 
@@ -73,7 +94,7 @@ public class MyService extends Service {
                     Intent intent = new Intent(getString(R.string.serviceNotify));
                     intent.putExtra(getString(R.string.status), 1);
                     LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
-                    onDestroy();
+//                    onDestroy();
                 } else {
                     Log.d(TAG, getString(R.string.connectionFailed) + response.errorBody());
                     Toast.makeText(getApplicationContext(), R.string.downloadFailed, Toast.LENGTH_SHORT).show();
@@ -101,10 +122,23 @@ public class MyService extends Service {
 
     @Override
     public void onTaskRemoved(Intent rootIntent) {
-        Intent restartServiceIntent = new Intent(getApplicationContext(), this.getClass());
-        restartServiceIntent.setPackage(getPackageName());
-        startService(restartServiceIntent);
         super.onTaskRemoved(rootIntent);
+        Intent myIntent = new Intent(getApplicationContext(), MyService.class);
+
+        PendingIntent pendingIntent = PendingIntent.getService(getApplicationContext(), 0, myIntent, 0);
+
+        AlarmManager alarmManager1 = (AlarmManager) getSystemService(ALARM_SERVICE);
+
+        Calendar calendar = Calendar.getInstance();
+
+        calendar.setTimeInMillis(System.currentTimeMillis());
+
+        calendar.add(Calendar.SECOND, 1);
+
+        alarmManager1.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+
+        Toast.makeText(getApplicationContext(),  R.string.downloading, Toast.LENGTH_SHORT).show();
+
     }
 
     private class DownloadApkFileTask extends AsyncTask<ResponseBody, Pair<Integer, Long>, String> {
@@ -163,6 +197,9 @@ public class MyService extends Service {
                 int count;
                 int progress = 0;
                 long fileSize = body.contentLength();
+                if(fileSize==-1){
+                    stopSelf();
+                }
                 Log.d(TAG, getString(R.string.fileSize) + fileSize);
                 while ((count = inputStream.read(data)) != -1) {
                     outputStream.write(data, 0, count);
