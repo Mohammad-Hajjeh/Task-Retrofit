@@ -28,4 +28,7 @@
     <string name="downloadFile">Downloading file..</string>
     <string name="api123">API123</string>
     <string name="space">\" \"</string>
+    <string name="serviceDestroyed">ServiceDestroyed</string>
+    <string name="serviceNotify">ServiceNotify</string>
+    <string name="status">Status</string>
 </resources>

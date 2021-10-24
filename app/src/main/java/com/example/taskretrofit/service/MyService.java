@@ -53,9 +53,8 @@ public class MyService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        Toast.makeText(this, "ServiceDestroyed", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, R.string.serviceDestroyed, Toast.LENGTH_SHORT).show();
     }
-
 
 
     @Override
@@ -71,11 +70,10 @@ public class MyService extends Service {
                     downloadApkFileTask = new DownloadApkFileTask();
                     downloadApkFileTask.execute(response.body());
                     Toast.makeText(getApplicationContext(), R.string.downloadSuccess, Toast.LENGTH_SHORT).show();
-                    Intent intent = new Intent("ServiceNotify");
-                    intent.putExtra("Status", 1);
+                    Intent intent = new Intent(getString(R.string.serviceNotify));
+                    intent.putExtra(getString(R.string.status), 1);
                     LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
                     onDestroy();
-
                 } else {
                     Log.d(TAG, getString(R.string.connectionFailed) + response.errorBody());
                     Toast.makeText(getApplicationContext(), R.string.downloadFailed, Toast.LENGTH_SHORT).show();
@@ -120,13 +118,7 @@ public class MyService extends Service {
 
         @Override
         protected String doInBackground(ResponseBody... urls) {
-//            try {
-                saveToDisk(urls[0], getString(R.string.apkName));
-
-//                Thread.sleep(50000);
-//            } catch (InterruptedException e) {
-//                e.printStackTrace();
-//            }
+            saveToDisk(urls[0], getString(R.string.apkName));
             return null;
         }
 

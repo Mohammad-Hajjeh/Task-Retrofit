@@ -10,11 +10,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.AsyncTask;
+
 import android.os.Environment;
 import android.os.Bundle;
-import android.util.Log;
-import android.util.Pair;
+
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
@@ -34,22 +33,15 @@ import com.google.gson.GsonBuilder;
 import com.jakewharton.retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+
 
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 import okhttp3.OkHttpClient;
-import okhttp3.ResponseBody;
 import okhttp3.logging.HttpLoggingInterceptor;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
@@ -58,7 +50,6 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String VERSION_NAME = "1.1";
     private static final String API_URL = "http://d4ed-185-114-120-45.ngrok.io/";
-    private Context context;
     public static final int DIALOG_DOWNLOAD_PROGRESS = 0;
     private ProgressDialog mProgressDialog;
     private APK apk;
@@ -69,7 +60,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        context = this;
         loadJson();
 
 
@@ -120,14 +110,12 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
                 startService(new Intent(getApplicationContext(), MyService.class));
-                //Toast.makeText(MainActivity.this, "backToActivity", Toast.LENGTH_SHORT).show();
             }
 
         });
         builder.show();
         LocalBroadcastManager.getInstance(this).registerReceiver(
-                mMessageReceiver, new IntentFilter("ServiceNotify"));
-
+                mMessageReceiver, new IntentFilter(getString(R.string.serviceNotify)));
 
 
     }
@@ -189,15 +177,15 @@ public class MainActivity extends AppCompatActivity {
                 return null;
         }
     }
+
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            // Get extra data included in the Intent
-            Integer status = intent.getIntExtra("Status",0);
+            Integer status = intent.getIntExtra(getString(R.string.status), 0);
 
             File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.apkName));
 
-            if(status==1){
+            if (status == 1) {
                 AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
                 builder.setCancelable(true);
                 builder.setTitle(R.string.installTitle);
