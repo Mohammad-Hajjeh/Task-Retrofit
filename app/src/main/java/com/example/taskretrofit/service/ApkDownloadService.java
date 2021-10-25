@@ -14,6 +14,7 @@ import android.widget.Toast;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.example.taskretrofit.R;
+import com.example.taskretrofit.model.RetrofitClient;
 import com.example.taskretrofit.model.Status;
 
 import java.io.File;
@@ -22,22 +23,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Calendar;
-import java.util.concurrent.TimeUnit;
 
-import okhttp3.OkHttpClient;
 import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-import retrofit2.Retrofit;
 
 public class ApkDownloadService extends Service {
     private DownloadApkFileTask downloadApkFileTask;
     private static final String TAG = ApkDownloadService.class.getSimpleName();
-    private static final String APK_URL = "http://download1585.mediafire.com/8mh55am8r27g/jpjaomhcj7ewaf1/app-debug.apk/";
-    private static final Integer TIME_OUT = 60;
+    private static final String APK_URL = "http://download1585.mediafire.com/8mh55am8r27g/jpjaomhcj7ewaf1/app-debug.apk/.";
     private static final Integer BUFFER_SIZE = 4096;
-    private Retrofit retrofit;
+    private static final Integer ITERATION_ERROR = 10;
+    private static final Integer ITERATION_SUCCESS = 1;
     private File destinationFile;
     private String checkDownloadIsSuccess = "FAILED";
 
@@ -50,7 +48,7 @@ public class ApkDownloadService extends Service {
         super.onDestroy();
         Toast.makeText(getApplicationContext(), R.string.service_destroyed, Toast.LENGTH_LONG).show();
         if (checkDownloadIsSuccess.equalsIgnoreCase(getString(R.string.failed))) {
-            wakeUpService(10, Status.ERROR);
+            wakeUpService(ITERATION_ERROR, Status.ERROR);
         }
     }
 
@@ -75,7 +73,7 @@ public class ApkDownloadService extends Service {
     public void onTaskRemoved(Intent rootIntent) {
         super.onTaskRemoved(rootIntent);
         if (checkDownloadIsSuccess.equalsIgnoreCase(getString(R.string.failed))) {
-            wakeUpService(1, Status.OK);
+            wakeUpService(ITERATION_SUCCESS, Status.OK);
         }
     }
 
@@ -168,18 +166,13 @@ public class ApkDownloadService extends Service {
     }
 
     public <T> T createService(Class<T> serviceClass) {
-        retrofit = new Retrofit.Builder()
-                .baseUrl(APK_URL)
-                .client(new OkHttpClient.Builder().connectTimeout(TIME_OUT, TimeUnit.SECONDS)
-                        .writeTimeout(TIME_OUT, TimeUnit.SECONDS)
-                        .readTimeout(TIME_OUT, TimeUnit.SECONDS).build())
-                .build();
-        return retrofit.create(serviceClass);
+        return RetrofitClient.getInstance().getRetrofit().create(serviceClass);
+
     }
 
     void retrofitDownload() {
         RetrofitInterface downloadService = createService(RetrofitInterface.class);
-        Call<ResponseBody> call = downloadService.downloadFileByUrl();
+        Call<ResponseBody> call = downloadService.downloadFileByUrl(APK_URL);
         call.enqueue(new Callback<ResponseBody>() {
             @Override
             public void onResponse(Call<ResponseBody> call, final Response<ResponseBody> response) {

@@ -25,37 +25,31 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.example.taskretrofit.BuildConfig;
 import com.example.taskretrofit.R;
+import com.example.taskretrofit.model.RetrofitClient;
 import com.example.taskretrofit.model.Status;
 import com.example.taskretrofit.service.ApkDownloadService;
 import com.example.taskretrofit.service.RetrofitInterface;
 import com.example.taskretrofit.model.AppVersion;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.jakewharton.retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
+
 
 import java.io.File;
 
-import java.util.Calendar;
 import java.util.List;
 
 
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
-import okhttp3.OkHttpClient;
-import okhttp3.logging.HttpLoggingInterceptor;
-import retrofit2.Retrofit;
-import retrofit2.converter.gson.GsonConverterFactory;
+
 
 public class MainActivity extends AppCompatActivity {
 
 
-    private static final String Current_VERSION_NAME = BuildConfig.VERSION_NAME;
-    private static final String API_URL = "http://f125-185-114-120-45.ngrok.io/";
+    private static final String CURRENT_VERSION_NAME = BuildConfig.VERSION_NAME;
+    private static final Integer REQUEST_CODE = 101;
     public static final int DIALOG_DOWNLOAD_PROGRESS = 0;
     private ProgressDialog progressDialog;
     private AppVersion apk;
-    private Retrofit retrofit;
 
 
     @Override
@@ -77,9 +71,9 @@ public class MainActivity extends AppCompatActivity {
         File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.version_apk_name));
         if (apkList != null && apkList.size() != 0) {
             apk = apkList.get(0);
-            askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, 101);
+            askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, REQUEST_CODE);
 
-            if (!apk.getVersion().equals(Current_VERSION_NAME)) {
+            if (!apk.getVersion().equals(CURRENT_VERSION_NAME)) {
                 if (!destinationFile.exists()) {
                     downloadZipFile();
                 } else {
@@ -126,19 +120,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public <T> T getRetrofit(Class<T> serviceClass) {
-        HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
-        interceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-        OkHttpClient client = new OkHttpClient.Builder().addInterceptor(interceptor).build();
-        Gson gson = new GsonBuilder()
-                .setLenient()
-                .create();
-        retrofit = new Retrofit.Builder()
-                .baseUrl(API_URL)
-                .client(client)
-                .addConverterFactory(GsonConverterFactory.create(gson))
-                .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
-                .build();
-        return retrofit.create(serviceClass);
+        return RetrofitClient.getInstance().getRetrofit().create(serviceClass);
     }
 
     private void askForPermission(String permission, Integer requestCode) {
@@ -161,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (ActivityCompat.checkSelfPermission(this, permissions[0]) == PackageManager.PERMISSION_GRANTED) {
 
-            if (requestCode == 101) {
+            if (requestCode == REQUEST_CODE) {
                 Toast.makeText(this, R.string.permission_granted, Toast.LENGTH_SHORT).show();
             }
         } else {
