@@ -35,6 +35,7 @@ import com.jakewharton.retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 
 import java.io.File;
 
+import java.util.Calendar;
 import java.util.List;
 
 
@@ -49,7 +50,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class MainActivity extends AppCompatActivity {
 
 
-    private static final String VERSION_NAME = "1.1";
+    private static final String Current_VERSION_NAME = BuildConfig.VERSION_NAME;
     private static final String API_URL = "http://f125-185-114-120-45.ngrok.io/";
     public static final int DIALOG_DOWNLOAD_PROGRESS = 0;
     private ProgressDialog progressDialog;
@@ -78,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
             apk = apkList.get(0);
             askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, 101);
 
-            if (apk.getVersion().equals(VERSION_NAME)) {
+            if (!apk.getVersion().equals(Current_VERSION_NAME)) {
                 if (!destinationFile.exists()) {
                     downloadZipFile();
                 } else {
