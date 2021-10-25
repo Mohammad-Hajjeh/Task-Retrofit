@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     private static final String VERSION_NAME = "1.1";
-    private static final String API_URL = "http://520d-185-114-120-44.ngrok.io/";
+    private static final String API_URL = "http://9332-185-114-120-44.ngrok.io/";
     public static final int DIALOG_DOWNLOAD_PROGRESS = 0;
     private ProgressDialog mProgressDialog;
     private APK apk;
@@ -101,11 +101,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void downloadZipFile() {
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-
         builder.setCancelable(true);
         builder.setTitle(R.string.downloadTitle);
         builder.setMessage(R.string.downloadMessage);
-
         builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
@@ -117,14 +115,12 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
                 startService(new Intent(getApplicationContext(), MyService.class));
-
             }
 
         });
         builder.show();
-        LocalBroadcastManager.getInstance(this).registerReceiver(
-                mMessageReceiver, new IntentFilter(getString(R.string.serviceNotify)));
-
+            LocalBroadcastManager.getInstance(this).registerReceiver(
+                    mMessageReceiver, new IntentFilter(getString(R.string.serviceNotify)));
 
     }
 
@@ -187,8 +183,6 @@ public class MainActivity extends AppCompatActivity {
     }
 void installFile(){
     File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.apkName));
-//    if(!destinationFile.exists())
-//        downloadZipFile();
     AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
     builder.setCancelable(true);
     builder.setTitle(R.string.installTitle);
@@ -218,12 +212,8 @@ void installFile(){
         @Override
         public void onReceive(Context context, Intent intent) {
             Integer status = intent.getIntExtra(getString(R.string.status), 0);
-
-
             if (status == 1) {
                 installFile();
-//                stopService(new Intent(MainActivity.this, MyService.class));
-
             }
         }
     };

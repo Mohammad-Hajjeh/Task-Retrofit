@@ -1,32 +1,19 @@
 package com.example.taskretrofit.service;
 
 import android.app.AlarmManager;
-import android.app.Dialog;
 import android.app.PendingIntent;
-import android.app.ProgressDialog;
 import android.app.Service;
-import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.AsyncTask;
-import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
 import android.util.Pair;
-import android.view.ContextThemeWrapper;
-import android.view.WindowManager;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.core.content.FileProvider;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.example.taskretrofit.BuildConfig;
 import com.example.taskretrofit.R;
-import com.example.taskretrofit.activity.MainActivity;
-import com.example.taskretrofit.model.APK;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -46,9 +33,11 @@ import retrofit2.Retrofit;
 public class MyService extends Service {
     private DownloadApkFileTask downloadApkFileTask;
     private static final String TAG = "MainActivity";
-    private static final String APK_URL = "http://download1585.mediafire.com/p2hhs99m1q7g/jpjaomhcj7ewaf1/app-debug.apk/";
+    private static final String APK_URL = "http://download1585.mediafire.com/8mh55am8r27g/jpjaomhcj7ewaf1/app-debug.apk/";
     private Retrofit retrofit;
     private File destinationFile;
+    private String checkDownloadIsSuccess = "FAILED";
+    ;
 
     public MyService() {
     }
@@ -56,57 +45,16 @@ public class MyService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        Toast.makeText(getApplicationContext(),  R.string.serviceDestroyed, Toast.LENGTH_LONG).show();
-
-
-        Intent myIntent = new Intent(getApplicationContext(), MyService.class);
-
-        PendingIntent pendingIntent = PendingIntent.getService(getApplicationContext(), 0, myIntent, 0);
-
-        AlarmManager alarmManager1 = (AlarmManager) getSystemService(ALARM_SERVICE);
-
-        Calendar calendar = Calendar.getInstance();
-
-        calendar.setTimeInMillis(System.currentTimeMillis());
-
-        calendar.add(Calendar.SECOND, 10);
-
-        alarmManager1.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
-
-//        Toast.makeText(getApplicationContext(), R.string.downloading, Toast.LENGTH_SHORT).show();
-
+        Toast.makeText(getApplicationContext(), R.string.serviceDestroyed, Toast.LENGTH_LONG).show();
+        if (checkDownloadIsSuccess.equalsIgnoreCase(getString(R.string.failed))) {
+            wakeUpService(10,0);
+        }
     }
-
 
     @Override
     public void onCreate() {
         super.onCreate();
-        RetrofitInterface downloadService = createService(RetrofitInterface.class);
-        Call<ResponseBody> call = downloadService.downloadFileByUrl();
-        call.enqueue(new Callback<ResponseBody>() {
-            @Override
-            public void onResponse(Call<ResponseBody> call, final Response<ResponseBody> response) {
-                if (response.isSuccessful()) {
-                    Log.d(TAG, getString(R.string.gotBody));
-                    downloadApkFileTask = new DownloadApkFileTask();
-                    downloadApkFileTask.execute(response.body());
-                    Toast.makeText(getApplicationContext(), R.string.downloadSuccess, Toast.LENGTH_SHORT).show();
-                    Intent intent = new Intent(getString(R.string.serviceNotify));
-                    intent.putExtra(getString(R.string.status), 1);
-                    LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
-//                    onDestroy();
-                } else {
-                    Log.d(TAG, getString(R.string.connectionFailed) + response.errorBody());
-                    Toast.makeText(getApplicationContext(), R.string.downloadFailed, Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onFailure(Call<ResponseBody> call, Throwable t) {
-                t.printStackTrace();
-                Log.e(TAG, t.getMessage());
-            }
-        });
+        retrofitDownload();
     }
 
     @Override
@@ -123,22 +71,9 @@ public class MyService extends Service {
     @Override
     public void onTaskRemoved(Intent rootIntent) {
         super.onTaskRemoved(rootIntent);
-        Intent myIntent = new Intent(getApplicationContext(), MyService.class);
-
-        PendingIntent pendingIntent = PendingIntent.getService(getApplicationContext(), 0, myIntent, 0);
-
-        AlarmManager alarmManager1 = (AlarmManager) getSystemService(ALARM_SERVICE);
-
-        Calendar calendar = Calendar.getInstance();
-
-        calendar.setTimeInMillis(System.currentTimeMillis());
-
-        calendar.add(Calendar.SECOND, 1);
-
-        alarmManager1.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
-
-        Toast.makeText(getApplicationContext(),  R.string.downloading, Toast.LENGTH_SHORT).show();
-
+        if (checkDownloadIsSuccess.equalsIgnoreCase(getString(R.string.failed))) {
+            wakeUpService(1,1);
+        }
     }
 
     private class DownloadApkFileTask extends AsyncTask<ResponseBody, Pair<Integer, Long>, String> {
@@ -152,8 +87,7 @@ public class MyService extends Service {
 
         @Override
         protected String doInBackground(ResponseBody... urls) {
-            saveToDisk(urls[0], getString(R.string.apkName));
-            return null;
+            return saveToDisk(urls[0], getString(R.string.apkName));
         }
 
         protected void onProgressUpdate(Pair<Integer, Long>... progress) {
@@ -163,10 +97,81 @@ public class MyService extends Service {
 
         @Override
         protected void onPostExecute(String result) {
-            super.onPostExecute(result);
+            checkDownloadIsSuccess = result;
+            if (result.equals(getString(R.string.Success))) {
+                Toast.makeText(getApplicationContext(), R.string.downloadSuccess, Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(getString(R.string.serviceNotify));
+                intent.putExtra(getString(R.string.status), 1);
+                LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+                onDestroy();
+            } else if (result.equals(getString(R.string.Faild))) {
+                Toast.makeText(getApplicationContext(), R.string.downloadFailed, Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(getString(R.string.serviceNotify));
+                intent.putExtra(getString(R.string.status), 0);
+                LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+            }
 
 
         }
+    }
+
+    private String saveToDisk(ResponseBody body, String filename) {
+        try {
+            destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), filename);
+            InputStream inputStream = null;
+            OutputStream outputStream = null;
+
+            try {
+                inputStream = body.byteStream();
+                outputStream = new FileOutputStream(destinationFile);
+                byte data[] = new byte[4096];
+                int count;
+                int progress = 0;
+                long fileSize = body.contentLength();
+                if (fileSize == -1) {
+                    stopSelf();
+                    return getString(R.string.Faild);
+                }
+
+                Log.d(TAG, getString(R.string.fileSize) + fileSize);
+                while ((count = inputStream.read(data)) != -1) {
+                    outputStream.write(data, 0, count);
+                    progress += count;
+                    Log.d(TAG, getString(R.string.progress) + progress + getString(R.string.slash) + fileSize + getString(R.string.print) + (float) progress / fileSize);
+                }
+
+                outputStream.flush();
+
+                Log.d(TAG, destinationFile.getParent());
+                return getString(R.string.Success);
+            } catch (IOException e) {
+                e.printStackTrace();
+                Log.d(TAG, getString(R.string.saveFailed));
+                return getString(R.string.Faild);
+            } finally {
+                if (inputStream != null) inputStream.close();
+                if (outputStream != null) outputStream.close();
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            Log.d(TAG, getString(R.string.saveFailed));
+            return getString(R.string.Faild);
+
+        }
+    }
+
+    void wakeUpService(int i,int b) {
+        Intent myIntent = new Intent(getApplicationContext(), MyService.class);
+        PendingIntent pendingIntent = PendingIntent.getService(getApplicationContext(), 0, myIntent, 0);
+        AlarmManager alarmManager1 = (AlarmManager) getSystemService(ALARM_SERVICE);
+        Calendar calendar = Calendar.getInstance();
+        calendar.setTimeInMillis(System.currentTimeMillis());
+        calendar.add(Calendar.SECOND, i);
+        alarmManager1.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
+        if(b==1)
+        Toast.makeText(getApplicationContext(), R.string.downloading, Toast.LENGTH_LONG).show();
+
     }
 
     public <T> T createService(Class<T> serviceClass) {
@@ -179,54 +184,28 @@ public class MyService extends Service {
         return retrofit.create(serviceClass);
     }
 
-    private File saveToDisk(ResponseBody body, String filename) {
-        try {
-
-
-            destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), filename);
-
-            InputStream inputStream = null;
-            OutputStream outputStream = null;
-
-            try {
-
-
-                inputStream = body.byteStream();
-                outputStream = new FileOutputStream(destinationFile);
-                byte data[] = new byte[4096];
-                int count;
-                int progress = 0;
-                long fileSize = body.contentLength();
-                if(fileSize==-1){
-                    stopSelf();
+    void retrofitDownload() {
+        RetrofitInterface downloadService = createService(RetrofitInterface.class);
+        Call<ResponseBody> call = downloadService.downloadFileByUrl();
+        call.enqueue(new Callback<ResponseBody>() {
+            @Override
+            public void onResponse(Call<ResponseBody> call, final Response<ResponseBody> response) {
+                if (response.isSuccessful()) {
+                    Log.d(TAG, getString(R.string.gotBody));
+                    downloadApkFileTask = new DownloadApkFileTask();
+                    downloadApkFileTask.execute(response.body());
+                } else {
+                    Log.d(TAG, getString(R.string.connectionFailed) + response.errorBody());
+                    Toast.makeText(getApplicationContext(), R.string.downloadFailed, Toast.LENGTH_SHORT).show();
                 }
-                Log.d(TAG, getString(R.string.fileSize) + fileSize);
-                while ((count = inputStream.read(data)) != -1) {
-                    outputStream.write(data, 0, count);
-                    progress += count;
-                    Log.d(TAG, getString(R.string.progress) + progress + getString(R.string.slash) + fileSize + getString(R.string.print) + (float) progress / fileSize);
-                }
-
-                outputStream.flush();
-
-                Log.d(TAG, destinationFile.getParent());
-                return destinationFile;
-            } catch (IOException e) {
-                e.printStackTrace();
-                Log.d(TAG, getString(R.string.saveFailed));
-                return null;
-            } finally {
-                if (inputStream != null) inputStream.close();
-                if (outputStream != null) outputStream.close();
-
-
             }
 
-        } catch (IOException e) {
-            e.printStackTrace();
-            Log.d(TAG, getString(R.string.saveFailed));
-            return null;
-        }
+            @Override
+            public void onFailure(Call<ResponseBody> call, Throwable t) {
+                t.printStackTrace();
+                Log.e(TAG, t.getMessage());
+            }
+        });
     }
 
 
