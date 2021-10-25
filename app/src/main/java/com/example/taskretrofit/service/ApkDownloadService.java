@@ -14,6 +14,7 @@ import android.widget.Toast;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.example.taskretrofit.R;
+import com.example.taskretrofit.model.Status;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -30,24 +31,26 @@ import retrofit2.Callback;
 import retrofit2.Response;
 import retrofit2.Retrofit;
 
-public class MyService extends Service {
+public class ApkDownloadService extends Service {
     private DownloadApkFileTask downloadApkFileTask;
-    private static final String TAG = "MainActivity";
+    private static final String TAG = ApkDownloadService.class.getSimpleName();
     private static final String APK_URL = "http://download1585.mediafire.com/8mh55am8r27g/jpjaomhcj7ewaf1/app-debug.apk/";
+    private static final Integer TIME_OUT = 60;
+    private static final Integer BUFFER_SIZE = 4096;
     private Retrofit retrofit;
     private File destinationFile;
     private String checkDownloadIsSuccess = "FAILED";
-    ;
 
-    public MyService() {
+
+    public ApkDownloadService() {
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        Toast.makeText(getApplicationContext(), R.string.serviceDestroyed, Toast.LENGTH_LONG).show();
+        Toast.makeText(getApplicationContext(), R.string.service_destroyed, Toast.LENGTH_LONG).show();
         if (checkDownloadIsSuccess.equalsIgnoreCase(getString(R.string.failed))) {
-            wakeUpService(10, 0);
+            wakeUpService(10, Status.ERROR);
         }
     }
 
@@ -72,7 +75,7 @@ public class MyService extends Service {
     public void onTaskRemoved(Intent rootIntent) {
         super.onTaskRemoved(rootIntent);
         if (checkDownloadIsSuccess.equalsIgnoreCase(getString(R.string.failed))) {
-            wakeUpService(1, 1);
+            wakeUpService(1, Status.OK);
         }
     }
 
@@ -81,13 +84,11 @@ public class MyService extends Service {
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-
-
         }
 
         @Override
         protected String doInBackground(ResponseBody... urls) {
-            return saveToDisk(urls[0], getString(R.string.apkName));
+            return saveToDisk(urls[0], getString(R.string.version_apk_name));
         }
 
         protected void onProgressUpdate(Pair<Integer, Long>... progress) {
@@ -99,10 +100,10 @@ public class MyService extends Service {
         protected void onPostExecute(String result) {
             checkDownloadIsSuccess = result;
             if (result.equals(getString(R.string.Success))) {
-                loadBroadCastReceiver(1);
+                loadBroadCastReceiver(com.example.taskretrofit.model.Status.OK);
                 onDestroy();
-            } else if (result.equals(getString(R.string.Faild))) {
-                loadBroadCastReceiver(0);
+            } else if (result.equals(getString(R.string.Failed))) {
+                loadBroadCastReceiver(com.example.taskretrofit.model.Status.ERROR);
             }
 
 
@@ -118,16 +119,16 @@ public class MyService extends Service {
             try {
                 inputStream = body.byteStream();
                 outputStream = new FileOutputStream(destinationFile);
-                byte data[] = new byte[4096];
+                byte data[] = new byte[BUFFER_SIZE];
                 int count;
                 int progress = 0;
                 long fileSize = body.contentLength();
                 if (fileSize == -1) {
                     stopSelf();
-                    return getString(R.string.Faild);
+                    return getString(R.string.Failed);
                 }
 
-                Log.d(TAG, getString(R.string.fileSize) + fileSize);
+                Log.d(TAG, getString(R.string.file_size) + fileSize);
                 while ((count = inputStream.read(data)) != -1) {
                     outputStream.write(data, 0, count);
                     progress += count;
@@ -139,40 +140,39 @@ public class MyService extends Service {
                 Log.d(TAG, destinationFile.getParent());
                 return getString(R.string.Success);
             } catch (IOException e) {
-                e.printStackTrace();
-                Log.d(TAG, getString(R.string.saveFailed));
-                return getString(R.string.Faild);
+                Log.d(TAG, getString(R.string.save_failed));
+                return getString(R.string.Failed);
             } finally {
                 if (inputStream != null) inputStream.close();
                 if (outputStream != null) outputStream.close();
             }
 
         } catch (IOException e) {
-            e.printStackTrace();
-            Log.d(TAG, getString(R.string.saveFailed));
-            return getString(R.string.Faild);
+            Log.d(TAG, getString(R.string.save_failed));
+            return getString(R.string.Failed);
 
         }
     }
 
-    void wakeUpService(int i, int b) {
-        Intent myIntent = new Intent(getApplicationContext(), MyService.class);
+    void wakeUpService(int iteration, Status status) {
+        Intent myIntent = new Intent(getApplicationContext(), ApkDownloadService.class);
         PendingIntent pendingIntent = PendingIntent.getService(getApplicationContext(), 0, myIntent, 0);
         AlarmManager alarmManager1 = (AlarmManager) getSystemService(ALARM_SERVICE);
         Calendar calendar = Calendar.getInstance();
         calendar.setTimeInMillis(System.currentTimeMillis());
-        calendar.add(Calendar.SECOND, i);
+        calendar.add(Calendar.SECOND, iteration);
         alarmManager1.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
-        if (b == 1)
+        if (status == Status.OK) {
             Toast.makeText(getApplicationContext(), R.string.downloading, Toast.LENGTH_LONG).show();
+        }
     }
 
     public <T> T createService(Class<T> serviceClass) {
         retrofit = new Retrofit.Builder()
                 .baseUrl(APK_URL)
-                .client(new OkHttpClient.Builder().connectTimeout(60, TimeUnit.SECONDS)
-                        .writeTimeout(60, TimeUnit.SECONDS)
-                        .readTimeout(60, TimeUnit.SECONDS).build())
+                .client(new OkHttpClient.Builder().connectTimeout(TIME_OUT, TimeUnit.SECONDS)
+                        .writeTimeout(TIME_OUT, TimeUnit.SECONDS)
+                        .readTimeout(TIME_OUT, TimeUnit.SECONDS).build())
                 .build();
         return retrofit.create(serviceClass);
     }
@@ -184,29 +184,29 @@ public class MyService extends Service {
             @Override
             public void onResponse(Call<ResponseBody> call, final Response<ResponseBody> response) {
                 if (response.isSuccessful()) {
-                    Log.d(TAG, getString(R.string.gotBody));
+                    Log.d(TAG, getString(R.string.got_Body_file));
                     downloadApkFileTask = new DownloadApkFileTask();
                     downloadApkFileTask.execute(response.body());
                 } else {
-                    Log.d(TAG, getString(R.string.connectionFailed) + response.errorBody());
-                    Toast.makeText(getApplicationContext(), R.string.downloadFailed, Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, getString(R.string.connection_Failed) + response.errorBody());
+                    Toast.makeText(getApplicationContext(), R.string.download_Failed, Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(Call<ResponseBody> call, Throwable t) {
-                t.printStackTrace();
                 Log.e(TAG, t.getMessage());
             }
         });
     }
 
-    void loadBroadCastReceiver(int status) {
-        if (status == 1)
-            Toast.makeText(getApplicationContext(), R.string.downloadSuccess, Toast.LENGTH_SHORT).show();
-        else
-            Toast.makeText(getApplicationContext(), R.string.downloadFailed, Toast.LENGTH_SHORT).show();
-        Intent intent = new Intent(getString(R.string.serviceNotify));
+    void loadBroadCastReceiver(Status status) {
+        if (status == Status.OK) {
+            Toast.makeText(getApplicationContext(), R.string.download_Successful, Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(getApplicationContext(), R.string.download_Failed, Toast.LENGTH_SHORT).show();
+        }
+        Intent intent = new Intent(getString(R.string.service_notify));
         intent.putExtra(getString(R.string.status), status);
         LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }

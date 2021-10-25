@@ -2,18 +2,18 @@ package com.example.taskretrofit.model;
 
 import com.google.gson.annotations.SerializedName;
 
-public class APK {
+public class AppVersion {
     @SerializedName("url")
     private String url;
     @SerializedName("version")
     private String version;
 
-    public APK(String url, String version) {
+    public AppVersion(String url, String version) {
         this.url = url;
         this.version = version;
     }
 
-    public APK() {
+    public AppVersion() {
     }
 
     public String getUrl() {

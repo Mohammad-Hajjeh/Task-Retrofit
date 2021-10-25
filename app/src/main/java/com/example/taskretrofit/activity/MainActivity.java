@@ -25,9 +25,10 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.example.taskretrofit.BuildConfig;
 import com.example.taskretrofit.R;
-import com.example.taskretrofit.service.MyService;
+import com.example.taskretrofit.model.Status;
+import com.example.taskretrofit.service.ApkDownloadService;
 import com.example.taskretrofit.service.RetrofitInterface;
-import com.example.taskretrofit.model.APK;
+import com.example.taskretrofit.model.AppVersion;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.jakewharton.retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
@@ -49,10 +50,10 @@ public class MainActivity extends AppCompatActivity {
 
 
     private static final String VERSION_NAME = "1.1";
-    private static final String API_URL = "http://9332-185-114-120-44.ngrok.io/";
+    private static final String API_URL = "http://f125-185-114-120-45.ngrok.io/";
     public static final int DIALOG_DOWNLOAD_PROGRESS = 0;
-    private ProgressDialog mProgressDialog;
-    private APK apk;
+    private ProgressDialog progressDialog;
+    private AppVersion apk;
     private Retrofit retrofit;
 
 
@@ -67,59 +68,59 @@ public class MainActivity extends AppCompatActivity {
 
     void loadJson() {
         RetrofitInterface retrofitInterface = getRetrofit(RetrofitInterface.class);
-        Observable<List<APK>> apkObservable = retrofitInterface.getApk();
+        Observable<List<AppVersion>> apkObservable = retrofitInterface.getApk();
         apkObservable.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(this::handleResults, this::handleError);
     }
 
-    private void handleResults(List<APK> apkList) {
-        File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.apkName));
+    private void handleResults(List<AppVersion> apkList) {
+        File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.version_apk_name));
         if (apkList != null && apkList.size() != 0) {
             apk = apkList.get(0);
             askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, 101);
 
-            if (apk.getVersion().equals(VERSION_NAME))
-                if (!destinationFile.exists())
+            if (apk.getVersion().equals(VERSION_NAME)) {
+                if (!destinationFile.exists()) {
                     downloadZipFile();
-                else {
+                } else {
                     installFile();
                 }
-
-            else
-                Toast.makeText(this, R.string.noUpdate, Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(this, R.string.no_update, Toast.LENGTH_SHORT).show();
+            }
         } else {
-            Toast.makeText(this, R.string.resultNotFound,
+            Toast.makeText(this, R.string.result_not_found,
                     Toast.LENGTH_LONG).show();
         }
     }
 
     private void handleError(Throwable t) {
 
-        Toast.makeText(this, R.string.errorFitchApi,
+        Toast.makeText(this, R.string.error_fitch_api,
                 Toast.LENGTH_LONG).show();
     }
 
     private void downloadZipFile() {
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         builder.setCancelable(true);
-        builder.setTitle(R.string.downloadTitle);
-        builder.setMessage(R.string.downloadMessage);
-        builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+        builder.setTitle(R.string.version_download_popup_title);
+        builder.setMessage(R.string.version_download_popup_message);
+        builder.setNegativeButton(R.string.version_cancel_popup, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
                 dialogInterface.cancel();
             }
         });
 
-        builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+        builder.setPositiveButton(R.string.version_ok_popup, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
-                startService(new Intent(getApplicationContext(), MyService.class));
+                startService(new Intent(getApplicationContext(), ApkDownloadService.class));
             }
 
         });
         builder.show();
         LocalBroadcastManager.getInstance(this).registerReceiver(
-                mMessageReceiver, new IntentFilter(getString(R.string.serviceNotify)));
+                messageReceiver, new IntentFilter(getString(R.string.service_notify)));
 
     }
 
@@ -150,7 +151,7 @@ public class MainActivity extends AppCompatActivity {
                 ActivityCompat.requestPermissions(MainActivity.this, new String[]{permission}, requestCode);
             }
         } else if (ContextCompat.checkSelfPermission(MainActivity.this, permission) == PackageManager.PERMISSION_DENIED) {
-            Toast.makeText(getApplicationContext(), R.string.permissionDenied, Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), R.string.permission_denied, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -159,10 +160,11 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (ActivityCompat.checkSelfPermission(this, permissions[0]) == PackageManager.PERMISSION_GRANTED) {
 
-            if (requestCode == 101)
-                Toast.makeText(this, R.string.permissionGranted, Toast.LENGTH_SHORT).show();
+            if (requestCode == 101) {
+                Toast.makeText(this, R.string.permission_granted, Toast.LENGTH_SHORT).show();
+            }
         } else {
-            Toast.makeText(this, R.string.permissionDeniedMessage, Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.permission_denied_message, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -170,12 +172,12 @@ public class MainActivity extends AppCompatActivity {
     protected Dialog onCreateDialog(int id) {
         switch (id) {
             case DIALOG_DOWNLOAD_PROGRESS:
-                mProgressDialog = new ProgressDialog(this);
-                mProgressDialog.setMessage(getString(R.string.downloadFile));
-                mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
-                mProgressDialog.setCancelable(false);
-                mProgressDialog.show();
-                return mProgressDialog;
+                progressDialog = new ProgressDialog(this);
+                progressDialog.setMessage(getString(R.string.download_file));
+                progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                progressDialog.setCancelable(false);
+                progressDialog.show();
+                return progressDialog;
             default:
                 return null;
         }
@@ -184,10 +186,10 @@ public class MainActivity extends AppCompatActivity {
     void installFile() {
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
         builder.setCancelable(true);
-        builder.setTitle(R.string.installTitle);
-        builder.setMessage(R.string.installMessage);
+        builder.setTitle(R.string.version_install_popup_title);
+        builder.setMessage(R.string.version_install_popup_message);
 
-        builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+        builder.setNegativeButton(R.string.version_cancel_popup, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
                 dialogInterface.cancel();
@@ -195,7 +197,7 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+        builder.setPositiveButton(R.string.version_ok_popup, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
                 installOk();
@@ -205,19 +207,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void installOk() {
-        File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.apkName));
+        File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.version_apk_name));
         Uri uri = FileProvider.getUriForFile(getApplicationContext(), BuildConfig.APPLICATION_ID + getString(R.string.provider), destinationFile);
-        Intent promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, getString(R.string.installType));
+        Intent promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, getString(R.string.version_install_popup_type));
         promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         promptInstall.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         getApplicationContext().startActivity(promptInstall);
     }
 
-    private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
+    private BroadcastReceiver messageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            Integer status = intent.getIntExtra(getString(R.string.status), 0);
-            if (status == 1) {
+            Status status = (Status) intent.getSerializableExtra(getString(R.string.status));
+            if (status == Status.OK) {
                 installFile();
             }
         }
