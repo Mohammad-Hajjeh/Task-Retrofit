@@ -80,13 +80,12 @@ public class MainActivity extends AppCompatActivity {
             if (apk.getVersion().equals(VERSION_NAME))
                 if (!destinationFile.exists())
                     downloadZipFile();
-                else
-                {
+                else {
                     installFile();
                 }
 
-                else
-                    Toast.makeText(this, R.string.noUpdate, Toast.LENGTH_SHORT).show();
+            else
+                Toast.makeText(this, R.string.noUpdate, Toast.LENGTH_SHORT).show();
         } else {
             Toast.makeText(this, R.string.resultNotFound,
                     Toast.LENGTH_LONG).show();
@@ -119,8 +118,8 @@ public class MainActivity extends AppCompatActivity {
 
         });
         builder.show();
-            LocalBroadcastManager.getInstance(this).registerReceiver(
-                    mMessageReceiver, new IntentFilter(getString(R.string.serviceNotify)));
+        LocalBroadcastManager.getInstance(this).registerReceiver(
+                mMessageReceiver, new IntentFilter(getString(R.string.serviceNotify)));
 
     }
 
@@ -181,33 +180,39 @@ public class MainActivity extends AppCompatActivity {
                 return null;
         }
     }
-void installFile(){
-    File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.apkName));
-    AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
-    builder.setCancelable(true);
-    builder.setTitle(R.string.installTitle);
-    builder.setMessage(R.string.installMessage);
 
-    builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
-        @Override
-        public void onClick(DialogInterface dialogInterface, int i) {
-            dialogInterface.cancel();
+    void installFile() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setCancelable(true);
+        builder.setTitle(R.string.installTitle);
+        builder.setMessage(R.string.installMessage);
 
-        }
-    });
+        builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                dialogInterface.cancel();
 
-    builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
-        @Override
-        public void onClick(DialogInterface dialogInterface, int i) {
-            Uri uri = FileProvider.getUriForFile(getApplicationContext(), BuildConfig.APPLICATION_ID + getString(R.string.provider), destinationFile);
-            Intent promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, getString(R.string.installType));
-            promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            promptInstall.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            getApplicationContext().startActivity(promptInstall);
-        }
-    });
-    builder.show();
-}
+            }
+        });
+
+        builder.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialogInterface, int i) {
+                installOk();
+            }
+        });
+        builder.show();
+    }
+
+    void installOk() {
+        File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.apkName));
+        Uri uri = FileProvider.getUriForFile(getApplicationContext(), BuildConfig.APPLICATION_ID + getString(R.string.provider), destinationFile);
+        Intent promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, getString(R.string.installType));
+        promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        promptInstall.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        getApplicationContext().startActivity(promptInstall);
+    }
+
     private BroadcastReceiver mMessageReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
