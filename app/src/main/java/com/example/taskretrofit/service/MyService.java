@@ -47,7 +47,7 @@ public class MyService extends Service {
         super.onDestroy();
         Toast.makeText(getApplicationContext(), R.string.serviceDestroyed, Toast.LENGTH_LONG).show();
         if (checkDownloadIsSuccess.equalsIgnoreCase(getString(R.string.failed))) {
-            wakeUpService(10,0);
+            wakeUpService(10, 0);
         }
     }
 
@@ -72,7 +72,7 @@ public class MyService extends Service {
     public void onTaskRemoved(Intent rootIntent) {
         super.onTaskRemoved(rootIntent);
         if (checkDownloadIsSuccess.equalsIgnoreCase(getString(R.string.failed))) {
-            wakeUpService(1,1);
+            wakeUpService(1, 1);
         }
     }
 
@@ -99,16 +99,10 @@ public class MyService extends Service {
         protected void onPostExecute(String result) {
             checkDownloadIsSuccess = result;
             if (result.equals(getString(R.string.Success))) {
-                Toast.makeText(getApplicationContext(), R.string.downloadSuccess, Toast.LENGTH_SHORT).show();
-                Intent intent = new Intent(getString(R.string.serviceNotify));
-                intent.putExtra(getString(R.string.status), 1);
-                LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+                loadBroadCastReceiver(1);
                 onDestroy();
             } else if (result.equals(getString(R.string.Faild))) {
-                Toast.makeText(getApplicationContext(), R.string.downloadFailed, Toast.LENGTH_SHORT).show();
-                Intent intent = new Intent(getString(R.string.serviceNotify));
-                intent.putExtra(getString(R.string.status), 0);
-                LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
+                loadBroadCastReceiver(0);
             }
 
 
@@ -161,7 +155,7 @@ public class MyService extends Service {
         }
     }
 
-    void wakeUpService(int i,int b) {
+    void wakeUpService(int i, int b) {
         Intent myIntent = new Intent(getApplicationContext(), MyService.class);
         PendingIntent pendingIntent = PendingIntent.getService(getApplicationContext(), 0, myIntent, 0);
         AlarmManager alarmManager1 = (AlarmManager) getSystemService(ALARM_SERVICE);
@@ -169,9 +163,8 @@ public class MyService extends Service {
         calendar.setTimeInMillis(System.currentTimeMillis());
         calendar.add(Calendar.SECOND, i);
         alarmManager1.set(AlarmManager.RTC_WAKEUP, calendar.getTimeInMillis(), pendingIntent);
-        if(b==1)
-        Toast.makeText(getApplicationContext(), R.string.downloading, Toast.LENGTH_LONG).show();
-
+        if (b == 1)
+            Toast.makeText(getApplicationContext(), R.string.downloading, Toast.LENGTH_LONG).show();
     }
 
     public <T> T createService(Class<T> serviceClass) {
@@ -206,6 +199,16 @@ public class MyService extends Service {
                 Log.e(TAG, t.getMessage());
             }
         });
+    }
+
+    void loadBroadCastReceiver(int status) {
+        if (status == 1)
+            Toast.makeText(getApplicationContext(), R.string.downloadSuccess, Toast.LENGTH_SHORT).show();
+        else
+            Toast.makeText(getApplicationContext(), R.string.downloadFailed, Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(getString(R.string.serviceNotify));
+        intent.putExtra(getString(R.string.status), status);
+        LocalBroadcastManager.getInstance(getApplicationContext()).sendBroadcast(intent);
     }
 
 
