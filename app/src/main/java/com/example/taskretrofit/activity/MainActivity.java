@@ -21,6 +21,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.ViewModelProviders;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.example.taskretrofit.BuildConfig;
@@ -28,8 +30,8 @@ import com.example.taskretrofit.R;
 import com.example.taskretrofit.model.RetrofitClient;
 import com.example.taskretrofit.model.Status;
 import com.example.taskretrofit.service.ApkDownloadService;
-import com.example.taskretrofit.service.RetrofitInterface;
 import com.example.taskretrofit.model.AppVersion;
+import com.example.taskretrofit.view_model.VersionViewModel;
 
 
 import java.io.File;
@@ -50,29 +52,31 @@ public class MainActivity extends AppCompatActivity {
     public static final int DIALOG_DOWNLOAD_PROGRESS = 0;
     private ProgressDialog progressDialog;
     private AppVersion apk;
+    private VersionViewModel versionViewModel;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        versionViewModel= ViewModelProviders.of(this).get(VersionViewModel.class);
         loadJson();
 
 
     }
 
     void loadJson() {
-        RetrofitInterface retrofitInterface = getRetrofit(RetrofitInterface.class);
-        Observable<List<AppVersion>> apkObservable = retrofitInterface.getApk();
-        apkObservable.subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(this::handleResults, this::handleError);
+        LiveData<Observable<List<AppVersion>>> versionObservable = versionViewModel.getVersionLiveData();
+        if(versionObservable!=null)
+        versionObservable.getValue().subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(this::handleResults, this::handleError);
     }
+
 
     private void handleResults(List<AppVersion> apkList) {
         File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.version_apk_name));
         if (apkList != null && apkList.size() != 0) {
             apk = apkList.get(0);
             askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, REQUEST_CODE);
-
             if (!apk.getVersion().equals(CURRENT_VERSION_NAME)) {
                 if (!destinationFile.exists()) {
                     downloadZipFile();
@@ -117,10 +121,6 @@ public class MainActivity extends AppCompatActivity {
         LocalBroadcastManager.getInstance(this).registerReceiver(
                 messageReceiver, new IntentFilter(getString(R.string.service_notify)));
 
-    }
-
-    public <T> T getRetrofit(Class<T> serviceClass) {
-        return RetrofitClient.getInstance().getRetrofit().create(serviceClass);
     }
 
     private void askForPermission(String permission, Integer requestCode) {
