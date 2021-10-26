@@ -1,21 +1,28 @@
-package com.example.taskretrofit.service;
+package com.example.taskretrofit;
 
 import android.app.AlarmManager;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
 import android.util.Pair;
 import android.widget.Toast;
 
+import androidx.annotation.RequiresApi;
+import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.example.taskretrofit.R;
-import com.example.taskretrofit.model.RetrofitClient;
 import com.example.taskretrofit.model.Status;
+import com.example.taskretrofit.service.RetrofitInterface;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -55,7 +62,32 @@ public class ApkDownloadService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService();
+        } else {
+            startForeground(1, new Notification());
+        }
         retrofitDownload();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    private void startForegroundService() {
+        String notificationChannelId = getString(R.string.notification_channel_id);
+        String channelName = getString(R.string.channel_name);
+        NotificationChannel notificationChannel = new NotificationChannel(notificationChannelId, channelName, NotificationManager.IMPORTANCE_NONE);
+        notificationChannel.setLightColor(Color.BLUE);
+        notificationChannel.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+        NotificationManager manager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+        assert manager != null;
+        manager.createNotificationChannel(notificationChannel);
+        NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(this, notificationChannelId);
+        Notification notification = notificationBuilder.setOngoing(true)
+                .setSmallIcon(R.drawable.ic_launcher_background)
+                .setContentTitle(getString(R.string.app_running_in_background))
+                .setPriority(NotificationManager.IMPORTANCE_MIN)
+                .setCategory(Notification.CATEGORY_SERVICE)
+                .build();
+        startForeground(2, notification);
     }
 
     @Override
@@ -99,6 +131,7 @@ public class ApkDownloadService extends Service {
             checkDownloadIsSuccess = result;
             if (result.equals(getString(R.string.Success))) {
                 loadBroadCastReceiver(com.example.taskretrofit.model.Status.OK);
+                stopForeground(true);
                 onDestroy();
             } else if (result.equals(getString(R.string.Failed))) {
                 loadBroadCastReceiver(com.example.taskretrofit.model.Status.ERROR);

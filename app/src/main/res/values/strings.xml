@@ -34,4 +34,7 @@
     <string name="failed">failed</string>
     <string name="Success">SUCCESS</string>
     <string name="Failed">FAILED</string>
+    <string name="app_running_in_background">App is running in background</string>
+    <string name="notification_channel_id">versionApp</string>
+    <string name="channel_name">Version App</string>
 </resources>

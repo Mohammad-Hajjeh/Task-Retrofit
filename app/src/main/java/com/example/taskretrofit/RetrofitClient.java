@@ -1,4 +1,4 @@
-package com.example.taskretrofit.model;
+package com.example.taskretrofit;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -12,7 +12,7 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class RetrofitClient {
-    private static final String API_URL = "http://d350-185-114-120-45.ngrok.io/";
+    private static final String API_URL = "http://74cc-185-114-120-45.ngrok.io/";
     private static final Integer TIME_OUT = 60;
     private static RetrofitClient retrofitClientInstance = null;
     private Retrofit retrofit;

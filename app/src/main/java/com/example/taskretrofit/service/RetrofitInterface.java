@@ -12,7 +12,7 @@ import retrofit2.http.Url;
 
 public interface RetrofitInterface {
     @GET("APK")
-    Observable<List<AppVersion>> getApk();
+    Observable<List<AppVersion>> getVersion();
 
     @GET
     Call<ResponseBody> downloadFileByUrl(@Url String url);

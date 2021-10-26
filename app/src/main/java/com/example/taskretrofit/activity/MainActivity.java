@@ -9,8 +9,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.net.Uri;
 
+import android.net.Uri;
 import android.os.Environment;
 import android.os.Bundle;
 
@@ -20,7 +20,6 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import androidx.core.content.FileProvider;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -28,7 +27,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import com.example.taskretrofit.BuildConfig;
 import com.example.taskretrofit.R;
 import com.example.taskretrofit.model.Status;
-import com.example.taskretrofit.service.ApkDownloadService;
+import com.example.taskretrofit.ApkDownloadService;
 import com.example.taskretrofit.model.AppVersion;
 import com.example.taskretrofit.view_model.VersionViewModel;
 
@@ -181,7 +180,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void installOk() {
-        versionViewModel.installVersion(getApplicationContext());
+
+        LiveData<Uri> uri = versionViewModel.installVersion(getApplicationContext());
+        Intent promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(uri.getValue(), getString(R.string.version_install_popup_type));
+        promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        promptInstall.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        getApplicationContext().startActivity(promptInstall);
     }
 
     private BroadcastReceiver messageReceiver = new BroadcastReceiver() {
