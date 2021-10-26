@@ -1,6 +1,7 @@
 package com.example.taskretrofit.view_model;
 
 import android.app.Application;
+import android.content.Context;
 
 import androidx.annotation.NonNull;
 import androidx.lifecycle.AndroidViewModel;
@@ -25,5 +26,9 @@ public class VersionViewModel extends AndroidViewModel {
 
     public LiveData<Observable<List<AppVersion>>> getVersionLiveData() {
         return versionLiveData;
+    }
+
+    public void installVersion(Context context) {
+        versionRepository.installVersion(context);
     }
 }

@@ -58,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        versionViewModel= ViewModelProviders.of(this).get(VersionViewModel.class);
+        versionViewModel = ViewModelProviders.of(this).get(VersionViewModel.class);
         loadJson();
 
 
@@ -66,12 +66,13 @@ public class MainActivity extends AppCompatActivity {
 
     void loadJson() {
         LiveData<Observable<List<AppVersion>>> versionObservable = versionViewModel.getVersionLiveData();
-        if(versionObservable!=null)
-        versionObservable.getValue().subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(this::handleResults, this::handleError);
+        if (versionObservable != null)
+            versionObservable.getValue().subscribeOn(Schedulers.io()).observeOn(AndroidSchedulers.mainThread()).subscribe(this::handleResults, this::handleError);
     }
 
 
     private void handleResults(List<AppVersion> apkList) {
+//        versionViewModel.downloadVersion(apkList,getApplicationContext());
         File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.version_apk_name));
         if (apkList != null && apkList.size() != 0) {
             apk = apkList.get(0);
@@ -124,14 +125,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void askForPermission(String permission, Integer requestCode) {
         if (ContextCompat.checkSelfPermission(MainActivity.this, permission) != PackageManager.PERMISSION_GRANTED) {
-
-
-            if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this, permission)) {
-                ActivityCompat.requestPermissions(MainActivity.this, new String[]{permission}, requestCode);
-
-            } else {
-                ActivityCompat.requestPermissions(MainActivity.this, new String[]{permission}, requestCode);
-            }
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{permission}, requestCode);
         } else if (ContextCompat.checkSelfPermission(MainActivity.this, permission) == PackageManager.PERMISSION_DENIED) {
             Toast.makeText(getApplicationContext(), R.string.permission_denied, Toast.LENGTH_SHORT).show();
         }
@@ -188,12 +182,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void installOk() {
-        File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.version_apk_name));
-        Uri uri = FileProvider.getUriForFile(getApplicationContext(), BuildConfig.APPLICATION_ID + getString(R.string.provider), destinationFile);
-        Intent promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(uri, getString(R.string.version_install_popup_type));
-        promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        promptInstall.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        getApplicationContext().startActivity(promptInstall);
+        versionViewModel.installVersion(getApplicationContext());
     }
 
     private BroadcastReceiver messageReceiver = new BroadcastReceiver() {
@@ -202,9 +191,7 @@ public class MainActivity extends AppCompatActivity {
             Status status = (Status) intent.getSerializableExtra(getString(R.string.status));
             if (status == Status.OK) {
                 installFile();
-            }
-            else
-            {
+            } else {
                 File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.version_apk_name));
                 destinationFile.delete();
                 startService(new Intent(getApplicationContext(), ApkDownloadService.class));
