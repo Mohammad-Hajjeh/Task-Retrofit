@@ -72,7 +72,6 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void handleResults(List<AppVersion> apkList) {
-//        versionViewModel.downloadVersion(apkList,getApplicationContext());
         File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.version_apk_name));
         if (apkList != null && apkList.size() != 0) {
             apk = apkList.get(0);
