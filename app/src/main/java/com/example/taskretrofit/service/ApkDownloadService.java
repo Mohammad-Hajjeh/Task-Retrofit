@@ -32,7 +32,7 @@ import retrofit2.Response;
 public class ApkDownloadService extends Service {
     private DownloadApkFileTask downloadApkFileTask;
     private static final String TAG = ApkDownloadService.class.getSimpleName();
-    private static final String APK_URL = "http://download1585.mediafire.com/8mh55am8r27g/jpjaomhcj7ewaf1/app-debug.apk/.";
+    private static final String APK_URL = "http://download1585.mediafire.com/5ux42rtfs3vg/jpjaomhcj7ewaf1/app-debug.apk/.";
     private static final Integer BUFFER_SIZE = 4096;
     private static final Integer ITERATION_ERROR = 10;
     private static final Integer ITERATION_SUCCESS = 1;

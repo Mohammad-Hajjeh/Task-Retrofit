@@ -27,7 +27,6 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.example.taskretrofit.BuildConfig;
 import com.example.taskretrofit.R;
-import com.example.taskretrofit.model.RetrofitClient;
 import com.example.taskretrofit.model.Status;
 import com.example.taskretrofit.service.ApkDownloadService;
 import com.example.taskretrofit.model.AppVersion;
@@ -171,7 +170,6 @@ public class MainActivity extends AppCompatActivity {
         builder.setCancelable(true);
         builder.setTitle(R.string.version_install_popup_title);
         builder.setMessage(R.string.version_install_popup_message);
-
         builder.setNegativeButton(R.string.version_cancel_popup, new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i) {
@@ -204,6 +202,12 @@ public class MainActivity extends AppCompatActivity {
             Status status = (Status) intent.getSerializableExtra(getString(R.string.status));
             if (status == Status.OK) {
                 installFile();
+            }
+            else
+            {
+                File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.version_apk_name));
+                destinationFile.delete();
+                startService(new Intent(getApplicationContext(), ApkDownloadService.class));
             }
         }
     };
