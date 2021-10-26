@@ -49,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
     private static final Integer REQUEST_CODE = 101;
     public static final int DIALOG_DOWNLOAD_PROGRESS = 0;
     private ProgressDialog progressDialog;
-    private AppVersion apk;
+    private AppVersion appVersion;
     private VersionViewModel versionViewModel;
 
 
@@ -73,9 +73,9 @@ public class MainActivity extends AppCompatActivity {
     private void handleResults(List<AppVersion> apkList) {
         File destinationFile = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), getString(R.string.version_apk_name));
         if (apkList != null && apkList.size() != 0) {
-            apk = apkList.get(0);
+            appVersion = apkList.get(0);
             askForPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE, REQUEST_CODE);
-            if (!apk.getVersion().equals(CURRENT_VERSION_NAME)) {
+            if (!appVersion.getVersion().equals(CURRENT_VERSION_NAME)) {
                 if (!destinationFile.exists()) {
                     downloadZipFile();
                 } else {
